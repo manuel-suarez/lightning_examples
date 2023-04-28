@@ -215,4 +215,14 @@ class GAN(L.LightningModule):
         sample_imgs = self(z)
         grid = torchvision.utils.make_grid(sample_imgs)
         self.logger.experiment.add_image("generated_images", grid, self.current_epoch)
+
+logging.info("Training")
+dm = MNISTDataModule()
+model = GAN(*dm.dims)
+trainer = L.Trainer(
+    accelerator="auto",
+    devices=1,
+    max_epochs=5
+)
+trainer.fit(model, dm)
 logging.info('Done!')
