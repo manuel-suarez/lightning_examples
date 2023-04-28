@@ -19,28 +19,30 @@ NUM_WORKERS = int(os.cpu_count() / 2)
 logging.info('DataModule')
 class MNISTDataModule(L.LightningDataModule):
     def __init__(
-            self,
-    data_dir: str = PATH_DATASETS,
-    batch_size: int = BATCH_SIZE,
-    num_workers: int = NUM_WORKERS
+        self,
+        data_dir: str = PATH_DATASETS,
+        batch_size: int = BATCH_SIZE,
+        num_workers: int = NUM_WORKERS,
     ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
+
         self.transform = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
+                transforms.Normalize((0.1307,), (0.3081,)),
             ]
         )
+
         self.dims = (1, 28, 28)
         self.num_classes = 10
 
     def prepare_data(self):
         # download
         MNIST(self.data_dir, train=True, download=True)
-        MNIST(self.data_dir, train=False, download=False)
+        MNIST(self.data_dir, train=False, download=True)
 
     def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
@@ -56,7 +58,7 @@ class MNISTDataModule(L.LightningDataModule):
         return DataLoader(
             self.mnist_train,
             batch_size=self.batch_size,
-            num_workers=self.num_workers
+            num_workers=self.num_workers,
         )
 
     def val_dataloader(self):
@@ -84,7 +86,7 @@ class Generator(nn.Module):
             *block(256, 512),
             *block(512, 1024),
             nn.Linear(1024, int(np.prod(img_shape))),
-            nn.Tanh()
+            nn.Tanh(),
         )
 
     def forward(self, z):
@@ -103,7 +105,7 @@ class Discriminator(nn.Module):
             nn.Linear(512, 256),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(256, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, img):
@@ -115,16 +117,16 @@ class Discriminator(nn.Module):
 logging.info('GAN')
 class GAN(L.LightningModule):
     def __init__(
-            self,
-            channels,
-            width,
-            height,
-            latent_dim: int = 100,
-            lr: float = 0.0002,
-            b1: float = 0.5,
-            b2: float = 0.999,
-            batch_size: int = BATCH_SIZE,
-            **kwargs
+        self,
+        channels,
+        width,
+        height,
+        latent_dim: int = 100,
+        lr: float = 0.0002,
+        b1: float = 0.5,
+        b2: float = 0.999,
+        batch_size: int = BATCH_SIZE,
+        **kwargs,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -134,13 +136,15 @@ class GAN(L.LightningModule):
         data_shape = (channels, width, height)
         self.generator = Generator(latent_dim=self.hparams.latent_dim, img_shape=data_shape)
         self.discriminator = Discriminator(img_shape=data_shape)
+
         self.validation_z = torch.randn(8, self.hparams.latent_dim)
+
         self.example_input_array = torch.zeros(2, self.hparams.latent_dim)
 
     def forward(self, z):
         return self.generator(z)
 
-    def adversarial_loss(selfself, y_hat, y):
+    def adversarial_loss(self, y_hat, y):
         return F.binary_cross_entropy(y_hat, y)
 
     def training_step(self, batch):
@@ -176,7 +180,7 @@ class GAN(L.LightningModule):
         self.untoggle_optimizer(optimizer_g)
 
         # train discriminator
-        # Measuge discriminator's ability to classify real from generated samples
+        # Measure discriminator's ability to classify real from generated samples
         self.toggle_optimizer(optimizer_d)
 
         # how well can it label as real?
@@ -222,7 +226,7 @@ model = GAN(*dm.dims)
 trainer = L.Trainer(
     accelerator="auto",
     devices=1,
-    max_epochs=5
+    max_epochs=5,
 )
 trainer.fit(model, dm)
 logging.info('Done!')
